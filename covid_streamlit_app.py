@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.pylab as pylab
 import numpy as np
 import streamlit as st
 
@@ -58,88 +59,154 @@ selected_col_df = full_df \
     ] 
 ]
 
+continent_list = selected_col_df['continent'].unique().tolist()
 country_list = selected_col_df['location'].unique().tolist()
 
-country = st.selectbox(
-     'Select a country to plot',
-     country_list
+# removing continents from country list
+for element in continent_list:
+    if element in country_list:
+        country_list.remove(element)
+
+continent_list.remove(np.nan)
+
+# SELECT WHICH COUNTRY OR CONTINET TO PLOT
+
+country_or_continent = st.radio(
+    'Country or Continent',
+    ('Country', 'Continent')
 )
 
-if st.button('Refresh Plot'):
+if country_or_continent == 'Continent':
     
-    with st.spinner(text="Generating plot for " + country):
-    
-        country_mask = selected_col_df['location'] == country
-        country_df = selected_col_df[country_mask]
-        
-        country_df["date"] = country_df["date"].astype("datetime64")
-        country_df["date"] = country_df["date"].apply(lambda x: x.strftime("%Y-%m-%d"))
-        country_df["date"] = country_df["date"].astype("datetime64")
+    selection = st.selectbox(
+        'Select a continent to plot',
+        continent_list
+    )
 
-        # Set data
+elif country_or_continent == 'Country':
+    
+    selection = st.selectbox(
+        'Select a country to plot',
+        country_list
+    )
+    
+country_mask = selected_col_df['location'] == selection
+country_df = selected_col_df[country_mask]
+
+country_df["date"] = country_df["date"].astype("datetime64")
+country_df["date"] = country_df["date"].apply(lambda x: x.strftime("%Y-%m-%d"))
+country_df["date"] = country_df["date"].astype("datetime64")
+
+# SELECT WHICH VALUES TO PLOT
+
+columns_to_plot_primary = [
+    'new_cases_smoothed_per_million',
+    'new_deaths_smoothed_per_million',
+    'hosp_patients_per_million'
+]
+
+columns_to_plot_secondary = [
+    'people_fully_vaccinated_per_hundred'
+]
+
+col1, col2 = st.columns(2)
+with col1:
+    columns_to_plot_primary_selected = st.multiselect(
+    'Select values to plot on primary axis (standardised/scaled)',
+    columns_to_plot_primary)
+with col2:
+    columns_to_plot_secondary_selected = st.multiselect(
+    'Select values to plot on secondary axis (%)',
+    columns_to_plot_secondary)
+
+
+if st.button('Generate Plot'):
+    
+    with st.spinner(text="Generating plot for " + selection):
+        
+        # CANVAS
+        fig, ax_primary = plt.subplots(figsize=(16, 8))
+
         x = country_df['date']
 
-        y_cases = country_df['new_cases_smoothed_per_million'] 
-        y_deaths = country_df['new_deaths_smoothed_per_million']
-        y_total_vaxed = country_df['people_fully_vaccinated_per_hundred']
+        # PRIMARY AXIS
+        i = 0
 
-        # Create blank canvas
-        fig, ax1 = plt.subplots(figsize=(16, 8))
+        for col in columns_to_plot_primary_selected:
+            y = country_df[col]
+            y_scaled = NormalizeData(y)
+            ax_primary.plot(
+                x, 
+                y_scaled,
+                label = col + " (1 = " + str(np.max(y)) + ")",
+                color = plt.cm.tab10(i)
+            )
+            i += 1
 
-        # Scale data for cases and deaths
-        y_cases_scaled = NormalizeData(y_cases)
-        y_deaths_scaled = NormalizeData(y_deaths)
+        # SECONDARY AXIS
+        ax_secondary = ax_primary.twinx()
+        ax_secondary.set_ylim(0, 100)
 
-        # Set axis
-        ax1.plot(
-            x, 
-            y_cases_scaled,
-            label = "New Cases Standardised (7 day average)",
-            color = "tab:blue"
-        )
+        for col in columns_to_plot_secondary_selected:
+            y = country_df[col]
+            # y_scaled = NormalizeData(y)
+            ax_secondary.plot(
+                x, 
+                y,
+                label = col,
+                color = plt.cm.tab10(i)
+            )
+            i += 1
 
-        ax1.plot(
-            x, 
-            y_deaths_scaled,
-            label = "New Deaths Standardised (7 day average)",
-            color = "tab:red"
-        )
-
-        # Create 2ndary axis for vax
-        ax2 = ax1.twinx()
-
-        ax2.plot(
-            x, 
-            y_total_vaxed,
-            label = "% Fully Vaxed",
-            color = "tab:green"
-        )
-
-        ax2.set_ylim(0, 100)
-
-        # ax.spines['right'].set_visible(False)
-        ax1.spines['top'].set_visible(False)
-        ax2.spines['top'].set_visible(False)
-
-        ax1.margins(x=0, y=0)
-        ax2.margins(x=0, y=0)
-
-        ax1.legend(
+        # SET AXIS LABELS
+        ax_primary.set_ylabel("Standardised Scale (see legend for value)")
+        ax_secondary.set_ylabel("Percentage")
+        
+        # SETTING LEGENDS
+        ax_primary.legend(
             loc='upper center', 
-            bbox_to_anchor=(0.5, -0.1),
-            fancybox=True, 
-            shadow=True, 
-            ncol=2
-        )
-        ax2.legend(
-            loc='upper center', 
-            bbox_to_anchor=(0.5, -0.15),
+            bbox_to_anchor=(0.2, -0.1),
             fancybox=True, 
             shadow=True, 
             ncol=1
         )
+        ax_secondary.legend(
+            loc='upper center', 
+            bbox_to_anchor=(0.7, -0.1),
+            fancybox=True, 
+            shadow=True, 
+            ncol=1
+        )
+
+        # SETTING MARGINS
+        ax_primary.margins(x=0, y=0)
+        ax_secondary.margins(x=0, y=0)
+
+        # SETTING SPINES
+        ax_primary.spines['top'].set_visible(False)
+        ax_secondary.spines['top'].set_visible(False)
         
-        st.pyplot(fig)
+        # SETTING SIZING
+        params = {
+            'legend.fontsize': 'x-large',
+            # 'figure.figsize': (16, 8),
+            'axes.labelsize': 'x-large',
+            # 'axes.titlesize':'x-large',
+            'xtick.labelsize':'large',
+            'ytick.labelsize':'large'
+        }
+        
+        plt.rcParams.update(params)
+        
+        st.subheader(selection)
+        st.pyplot(plt)
 
 with st.expander("Data Source"):
     st.write("https://covid.ourworldindata.org/")
+    
+# -------------------------------------------------
+# TO DO LIST
+# -------------------------------------------------
+
+# - Add hospitalisations
+# - Vaxed vs non-vaxed that are hospitalised or deaths
