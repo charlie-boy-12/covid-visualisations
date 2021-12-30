@@ -140,3 +140,6 @@ if st.button('Refresh Plot'):
         )
         
         st.pyplot(fig)
+
+with st.expander("Data Source"):
+    st.write("https://covid.ourworldindata.org/")
