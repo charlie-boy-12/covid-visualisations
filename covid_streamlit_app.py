@@ -65,16 +65,13 @@ country = st.selectbox(
      country_list
 )
 
-# country = 'United Kingdom'
-country_mask = selected_col_df['location'] == country
-country_df = selected_col_df[country_mask]
-# plt.show()
-
 if st.button('Refresh Plot'):
     
     with st.spinner(text="Generating plot for " + country):
     
-
+        country_mask = selected_col_df['location'] == country
+        country_df = selected_col_df[country_mask]
+        
         country_df["date"] = country_df["date"].astype("datetime64")
         country_df["date"] = country_df["date"].apply(lambda x: x.strftime("%Y-%m-%d"))
         country_df["date"] = country_df["date"].astype("datetime64")
