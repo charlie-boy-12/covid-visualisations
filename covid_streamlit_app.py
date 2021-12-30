@@ -67,78 +67,79 @@ country = st.selectbox(
 
 # country = 'United Kingdom'
 country_mask = selected_col_df['location'] == country
-
+country_df = selected_col_df[country_mask]
 # plt.show()
 
 if st.button('Refresh Plot'):
     
-    country_df = selected_col_df[country_mask]
-
-    country_df["date"] = country_df["date"].astype("datetime64")
-    country_df["date"] = country_df["date"].apply(lambda x: x.strftime("%Y-%m-%d"))
-    country_df["date"] = country_df["date"].astype("datetime64")
-
-    # Set data
-    x = country_df['date']
-
-    y_cases = country_df['new_cases_smoothed_per_million'] 
-    y_deaths = country_df['new_deaths_smoothed_per_million']
-    y_total_vaxed = country_df['people_fully_vaccinated_per_hundred']
-
-    # Create blank canvas
-    fig, ax1 = plt.subplots(figsize=(16, 8))
-
-    # Scale data for cases and deaths
-    y_cases_scaled = NormalizeData(y_cases)
-    y_deaths_scaled = NormalizeData(y_deaths)
-
-    # Set axis
-    ax1.plot(
-        x, 
-        y_cases_scaled,
-        label = "New Cases Standardised (7 day average)",
-        color = "tab:blue"
-    )
-
-    ax1.plot(
-        x, 
-        y_deaths_scaled,
-        label = "New Deaths Standardised (7 day average)",
-        color = "tab:red"
-    )
-
-    # Create 2ndary axis for vax
-    ax2 = ax1.twinx()
-
-    ax2.plot(
-        x, 
-        y_total_vaxed,
-        label = "% Fully Vaxed",
-        color = "tab:green"
-    )
-
-    ax2.set_ylim(0, 100)
-
-    # ax.spines['right'].set_visible(False)
-    ax1.spines['top'].set_visible(False)
-    ax2.spines['top'].set_visible(False)
-
-    ax1.margins(x=0, y=0)
-    ax2.margins(x=0, y=0)
-
-    ax1.legend(
-        loc='upper center', 
-        bbox_to_anchor=(0.5, -0.1),
-        fancybox=True, 
-        shadow=True, 
-        ncol=2
-    )
-    ax2.legend(
-        loc='upper center', 
-        bbox_to_anchor=(0.5, -0.15),
-        fancybox=True, 
-        shadow=True, 
-        ncol=1
-    )
+    with st.spinner(text="Generating plot for " + country):
     
-    st.pyplot(fig)
+
+        country_df["date"] = country_df["date"].astype("datetime64")
+        country_df["date"] = country_df["date"].apply(lambda x: x.strftime("%Y-%m-%d"))
+        country_df["date"] = country_df["date"].astype("datetime64")
+
+        # Set data
+        x = country_df['date']
+
+        y_cases = country_df['new_cases_smoothed_per_million'] 
+        y_deaths = country_df['new_deaths_smoothed_per_million']
+        y_total_vaxed = country_df['people_fully_vaccinated_per_hundred']
+
+        # Create blank canvas
+        fig, ax1 = plt.subplots(figsize=(16, 8))
+
+        # Scale data for cases and deaths
+        y_cases_scaled = NormalizeData(y_cases)
+        y_deaths_scaled = NormalizeData(y_deaths)
+
+        # Set axis
+        ax1.plot(
+            x, 
+            y_cases_scaled,
+            label = "New Cases Standardised (7 day average)",
+            color = "tab:blue"
+        )
+
+        ax1.plot(
+            x, 
+            y_deaths_scaled,
+            label = "New Deaths Standardised (7 day average)",
+            color = "tab:red"
+        )
+
+        # Create 2ndary axis for vax
+        ax2 = ax1.twinx()
+
+        ax2.plot(
+            x, 
+            y_total_vaxed,
+            label = "% Fully Vaxed",
+            color = "tab:green"
+        )
+
+        ax2.set_ylim(0, 100)
+
+        # ax.spines['right'].set_visible(False)
+        ax1.spines['top'].set_visible(False)
+        ax2.spines['top'].set_visible(False)
+
+        ax1.margins(x=0, y=0)
+        ax2.margins(x=0, y=0)
+
+        ax1.legend(
+            loc='upper center', 
+            bbox_to_anchor=(0.5, -0.1),
+            fancybox=True, 
+            shadow=True, 
+            ncol=2
+        )
+        ax2.legend(
+            loc='upper center', 
+            bbox_to_anchor=(0.5, -0.15),
+            fancybox=True, 
+            shadow=True, 
+            ncol=1
+        )
+        
+        st.pyplot(fig)
